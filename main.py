@@ -1,5 +1,7 @@
 from objects.moves import Moves
 from objects.piece import Piece
+from move_calculator import MoveCalculator
+from objects.board import Board
 
 
 def get_move_name(move: tuple[int, int, Piece, Moves]):
@@ -11,8 +13,13 @@ def get_move_name(move: tuple[int, int, Piece, Moves]):
 
 
 def execute():
-    pass
+    board = Board()
+    MAX_DEPTH = 3
+    value, move = MoveCalculator().calculate_move(board=board, iter=0, color='white', MAX_DEPTH=MAX_DEPTH)
 
+    print('             ')
+    print(get_move_name(move))
+    print(value)
 
 
 if __name__ == "__main__":

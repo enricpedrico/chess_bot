@@ -1,7 +1,7 @@
 
 
 class Piece:
-    color: str
+    color: str = 'white'
     value: int = 0
     position: tuple[int, int] | None = None
     value_adder_matrix: list[list[float]]
@@ -17,6 +17,14 @@ class Piece:
     def __repr__(self):
         symbol = self.__class__.__name__[0]
         return symbol.upper() if self.color == 'white' else symbol.lower()
+    
+    def get_value_adder_matrix(self):
+        if self.color == 'black':
+            value_adder_matrix = self.value_adder_matrix[::-1]
+        else:
+            value_adder_matrix = self.value_adder_matrix
+
+        return value_adder_matrix
 
 
 class King(Piece):

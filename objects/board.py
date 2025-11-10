@@ -1,11 +1,10 @@
-from dataclasses import dataclass
-from piece import Rook, Knight, Bishop, Queen, King, Pawn, Piece
-from moves import Moves
+from dataclasses import dataclass, field
+from .piece import Rook, Knight, Bishop, Queen, King, Pawn, Piece
+from .moves import Moves
 
 @dataclass
 class Board:
-    punctuation: float
-    board: list
+    board: list = field(default_factory=list)
 
     def __post_init__(self):
         self.board = self.create_board()
@@ -43,12 +42,31 @@ class Board:
 
         self.board[old_row][old_col] = None
         self.board[new_row][new_col] = piece
+
+        piece.position = (new_row, new_col)
+
+        return self.board
     
     def get_pieces(self, color: str):
-        return [piece for row in self.board for piece in row if piece.color == color]
+        return [piece for row in self.board for piece in row if piece is not None and piece.color == color]
+    
+
+    def get_punctuation(self, color: str) -> float:
+        total = 0
+
+        for row in self.board:
+            for piece in row:
+                if piece is not None:
+                    i, j = piece.position
+                    adder = piece.get_value_adder_matrix()[i][j]
+                    value = piece.value + adder
+                    total += value if color == piece.color else -value
+
+        return total
+
     
     
-    """NO ENROQUE; NO EN_PASSANT; NO PROMOTE"""
+    """NO ENROQUE; NO EN_PASSANT; NO PROMOTE; LEGAL MOVES?"""
     def get_legal_moves(self, piece) -> list[tuple[int, int, Piece, Moves]]:
         """Devuelve una lista de tuplas (fila, columna, pieza, tipo_de_movimiento)."""
         if not piece or not hasattr(piece, "position"):
@@ -80,7 +98,7 @@ class Board:
                     add_move(r, c, piece, Moves.CAPTURE)
 
             final_row = 0 if piece.color == "white" else 7
-            for (r, c, mtype) in moves.copy():
+            for (r, c, piece, mtype) in moves.copy():
                 if r == final_row:
                     moves.remove((r, c, piece, mtype))
                     moves.append((r, c, Queen(color=piece.color, position=(r, c)), Moves.PROMOTION))
@@ -145,3 +163,28 @@ class Board:
                 r += dr
                 c += dc
         return result
+    
+
+    def __str__(self):
+        piece_symbols = {
+            'Pawn': 'P',
+            'Rook': 'R',
+            'Knight': 'N',
+            'Bishop': 'B',
+            'Queen': 'Q',
+            'King': 'K'
+        }
+
+        lines = []
+        for row in self.board:
+            row_str = ""
+            for piece in row:
+                if piece is None:
+                    row_str += ". "
+                else:
+                    symbol = piece_symbols.get(piece.__class__.__name__, "?")
+                    if piece.color == 'black':
+                        symbol = symbol.lower()
+                    row_str += symbol + " "
+            lines.append(row_str.rstrip())
+        return "\n".join(lines)
