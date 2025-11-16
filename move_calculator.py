@@ -5,7 +5,7 @@ import random
 
 @dataclass
 class MoveCalculator:
-    def calculate_move(self, board: Board, iter: int = 0, color: str = 'white', MAX_DEPTH = 0) -> tuple[float, tuple]:
+    def calculate_move(self, board: Board, iter: int = 0, color: str = 'white', MAX_DEPTH = 0) -> tuple[Board, tuple]:
         legal_moves = []
         for piece in board.get_pieces(color=color):
             for move_tuple in board.get_legal_moves(piece=piece):
@@ -24,13 +24,17 @@ class MoveCalculator:
             return self.choose_random(function=max, legal_moves=legal_moves, color=color)
         
         responses = []
-        for move in legal_moves:
-            punctuation, move_tuple = self.calculate_move(board=move[0],
+        for board, move_made in legal_moves:
+            new_board, new_move_tuple = self.calculate_move(board=board,
                                                           iter=iter+1,
                                                           color=self.get_other_color(color),
                                                           MAX_DEPTH=MAX_DEPTH)
-            responses.append((punctuation,
-                              move_tuple))
+            if iter == 0:
+                responses.append((new_board,
+                                  move_made))
+            else:
+                responses.append((new_board,
+                                  new_move_tuple))
 
         return self.choose_random(function=min, legal_moves=responses, color=self.get_other_color(color))
 
@@ -47,9 +51,9 @@ class MoveCalculator:
 
         best_moves = [(board, move) for score, board, move in scores if score == best_value]
 
-        chosen_move = random.choice(best_moves)
+        board, move = random.choice(best_moves)
 
-        return chosen_move
+        return board, move
 
     
     @staticmethod

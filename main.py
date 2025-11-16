@@ -13,13 +13,17 @@ def get_move_name(move: tuple[int, int, Piece, Moves]):
 
 
 def execute():
-    board = Board()
-    MAX_DEPTH = 3
-    value, move = MoveCalculator().calculate_move(board=board, iter=0, color='white', MAX_DEPTH=MAX_DEPTH)
+    fen_input: str = str(input("FEN position (or empty): "))
+    if fen_input == "":
+        board = Board()
+    else:
+        board = Board.from_fen(fen_input)
+    MAX_DEPTH = 2
+    board, move = MoveCalculator().calculate_move(board=board, iter=0, color='white', MAX_DEPTH=MAX_DEPTH)
 
     print('             ')
     print(get_move_name(move))
-    print(value)
+    #print(board)
 
 
 if __name__ == "__main__":

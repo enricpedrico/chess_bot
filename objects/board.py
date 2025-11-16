@@ -4,36 +4,15 @@ from .moves import Moves
 
 @dataclass
 class Board:
-    board: list = field(default_factory=list)
+    board: list[list] | None = None
+    active_color: str = 'white'
+    castling_rights: str = '-'
+    en_passant: tuple | None = None
+    halfmove_clock: int = 0
+    fullmove_number: int = 1
 
-    def __post_init__(self):
-        self.board = self.create_board()
+    
 
-    @staticmethod
-    def create_board():
-        board: list[list[Piece | None]] = [[None for _ in range(8)] for _ in range(8)]
-
-        board[0] = [
-            Rook('black'), Knight('black'), Bishop('black'), Queen('black'),
-            King('black'), Bishop('black'), Knight('black'), Rook('black')
-        ]
-        board[1] = [Pawn('black') for _ in range(8)]
-
-        for row in range(2, 6):
-            board[row] = [None for _ in range(8)]
-
-        board[6] = [Pawn('white') for _ in range(8)]
-        board[7] = [
-            Rook('white'), Knight('white'), Bishop('white'), Queen('white'),
-            King('white'), Bishop('white'), Knight('white'), Rook('white')
-        ]
-
-        for row in range(8):
-            for col in range(8):
-                if board[row][col] is not None and board[row][col].position is None:
-                    board[row][col].position = (row, col)
-
-        return board
     
     # PRE: move is legal
     def move(self, move: tuple[int, int, Piece, Moves]):
@@ -188,3 +167,100 @@ class Board:
                     row_str += symbol + " "
             lines.append(row_str.rstrip())
         return "\n".join(lines)
+    
+    ##############################################################################################################################
+    # INIT BOARD #################################################################################################################
+    ##############################################################################################################################
+
+    def __post_init__(self):
+        if self.board is None:
+            self.board = self.create_starting_board()
+        else:
+            self.fix_piece_positions()
+
+    @classmethod
+    def from_fen(cls, fen: str):
+        parts = fen.split()
+        placement, active_color, castling, en_passant, halfmove, fullmove = parts
+
+        board = cls.parse_fen_placement(placement)
+
+        obj = cls(board=board)
+        obj.active_color = 'white' if active_color == 'w' else 'black'
+        obj.castling_rights = castling if castling != '-' else ''
+        obj.en_passant = cls.convert_en_passant(en_passant)
+        obj.halfmove_clock = int(halfmove)
+        obj.fullmove_number = int(fullmove)
+
+        return obj
+    
+    @staticmethod
+    def parse_fen_placement(placement: str) -> list[list]:
+        rows = placement.split('/')
+        board = [[None for _ in range(8)] for _ in range(8)]
+
+        piece_from_char = {
+            'p': Pawn, 'r': Rook, 'n': Knight, 'b': Bishop,
+            'q': Queen, 'k': King,
+        }
+
+        for row_idx, fen_row in enumerate(rows):
+            col = 0
+            for char in fen_row:
+                if char.isdigit():
+                    col += int(char)
+                else:
+                    color = 'white' if char.isupper() else 'black'
+                    piece_class = piece_from_char[char.lower()]
+                    board[row_idx][col] = piece_class(color)
+                    col += 1
+
+        # Assign positions
+        for r in range(8):
+            for c in range(8):
+                piece = board[r][c]
+                if piece:
+                    piece.position = (r, c)
+
+        return board
+    
+    @staticmethod
+    def convert_en_passant(ep: str):
+        if ep == '-':
+            return None
+        file = ord(ep[0]) - ord('a')
+        rank = 8 - int(ep[1])
+        return (rank, file)
+    
+    @staticmethod
+    def create_starting_board():
+        board = [[None for _ in range(8)] for _ in range(8)]
+
+        board[0] = [
+            Rook('black'), Knight('black'), Bishop('black'), Queen('black'),
+            King('black'), Bishop('black'), Knight('black'), Rook('black')
+        ]
+        board[1] = [Pawn('black') for _ in range(8)]
+
+        for row in range(2, 6):
+            board[row] = [None for _ in range(8)]
+
+        board[6] = [Pawn('white') for _ in range(8)]
+        board[7] = [
+            Rook('white'), Knight('white'), Bishop('white'), Queen('white'),
+            King('white'), Bishop('white'), Knight('white'), Rook('white')
+        ]
+
+        for r in range(8):
+            for c in range(8):
+                if board[r][c] is not None:
+                    board[r][c].position = (r, c)
+
+        return board
+    
+    def fix_piece_positions(self):
+        for r in range(8):
+            for c in range(8):
+                piece = self.board[r][c]
+                if piece is not None:
+                    piece.position = (r, c)
