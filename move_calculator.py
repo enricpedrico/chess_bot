@@ -30,12 +30,12 @@ class MoveCalculator:
                 legal_moves_found = True
                 target_row, target_col, move_piece, move_type = move_tuple
                 
-                captured_piece = board.move(move_tuple, start_pos=original_pos)
+                captured_piece, old_castling_rights = board.move(move_tuple, start_pos=original_pos)
                 
                 score, child_path = self.calculate_move(board, iter + 1, self.get_other_color(color), MAX_DEPTH)
 
                 original_piece = piece if move_piece != piece else None
-                board.undo_move(move_piece, original_pos, (target_row, target_col), captured_piece, original_piece)
+                board.undo_move(move_piece, original_pos, (target_row, target_col), captured_piece, old_castling_rights, original_piece, move_type)
 
                 current_path = [move_tuple] + child_path
 

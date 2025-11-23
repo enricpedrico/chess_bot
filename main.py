@@ -29,11 +29,11 @@ def execute():
     if move_path:
         print(f'BEST MOVE: {get_move_name(move_path[0])}')
         
-        if len(move_path) > 1:
+        """if len(move_path) > 1:
             print('NEXT MOVES: ', end='')
             for move in move_path[1:]:
                 print(get_move_name(move), end=' ')
-            print()
+            print()"""
     else:
         print("No moves found")
 

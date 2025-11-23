@@ -13,7 +13,7 @@ class MoveGenerator:
         for move in pseudo_moves:
             target_row, target_col, move_piece, move_type = move
             
-            captured_piece = board_obj.move(move, start_pos=original_pos)
+            captured_piece, old_castling_rights = board_obj.move(move, start_pos=original_pos)
             
             king_pos = board_obj.white_king_pos if my_color == 'white' else board_obj.black_king_pos
             
@@ -22,9 +22,11 @@ class MoveGenerator:
             if king_pos:
                 if not self.is_square_attacked(board_obj, king_pos, 'black' if my_color == 'white' else 'white'):
                     legal_moves.append(move)
+            else:
+                legal_moves.append(move)
             
             original_piece = piece if move_piece != piece else None
-            board_obj.undo_move(move_piece, original_pos, (target_row, target_col), captured_piece, original_piece)
+            board_obj.undo_move(move_piece, original_pos, (target_row, target_col), captured_piece, old_castling_rights, original_piece, move_type)
 
         return legal_moves
 
@@ -175,6 +177,32 @@ class MoveGenerator:
                         add_move(r, c, piece, Moves.NORMAL)
                     elif target.color != piece.color:
                         add_move(r, c, piece, Moves.CAPTURE)
+
+            # Castling Logic
+            if not self.is_square_attacked(board_obj, (row, col), 'black' if piece.color == 'white' else 'white'):
+                # Short Castling
+                if piece.color == 'white':
+                    if 'K' in board_obj.castling_rights:
+                        if board_obj.board[7][5] is None and board_obj.board[7][6] is None:
+                            if not self.is_square_attacked(board_obj, (7, 5), 'black') and not self.is_square_attacked(board_obj, (7, 6), 'black'):
+                                add_move(7, 6, piece, Moves.CASTLING_SHORT)
+                else:
+                    if 'k' in board_obj.castling_rights:
+                        if board_obj.board[0][5] is None and board_obj.board[0][6] is None:
+                            if not self.is_square_attacked(board_obj, (0, 5), 'white') and not self.is_square_attacked(board_obj, (0, 6), 'white'):
+                                add_move(0, 6, piece, Moves.CASTLING_SHORT)
+
+                # Long Castling
+                if piece.color == 'white':
+                    if 'Q' in board_obj.castling_rights:
+                        if board_obj.board[7][1] is None and board_obj.board[7][2] is None and board_obj.board[7][3] is None:
+                            if not self.is_square_attacked(board_obj, (7, 2), 'black') and not self.is_square_attacked(board_obj, (7, 3), 'black'):
+                                add_move(7, 2, piece, Moves.CASTLING_LONG)
+                else:
+                    if 'q' in board_obj.castling_rights:
+                        if board_obj.board[0][1] is None and board_obj.board[0][2] is None and board_obj.board[0][3] is None:
+                            if not self.is_square_attacked(board_obj, (0, 2), 'white') and not self.is_square_attacked(board_obj, (0, 3), 'white'):
+                                add_move(0, 2, piece, Moves.CASTLING_LONG)
 
         return moves
 

@@ -32,7 +32,7 @@ class Board:
 
     # PRE: move is legal
     def move(self, move: tuple[int, int, Piece, Moves], start_pos: tuple[int, int] | None = None):
-        new_row, new_col, piece, _ = move
+        new_row, new_col, piece, move_type = move
         
         if start_pos:
             old_row, old_col = start_pos
@@ -66,9 +66,68 @@ class Board:
             else:
                 self.black_king_pos = (new_row, new_col)
 
-        return target
+        # Handle Castling
+        old_castling_rights = self.castling_rights
+        if move_type == Moves.CASTLING_SHORT:
+            rook_col = 7
+            rook_target_col = 5
+            rook = self.board[new_row][rook_col]
+            self.board[new_row][rook_col] = None
+            self.board[new_row][rook_target_col] = rook
+            rook.position = (new_row, rook_target_col)
+            
+            # Update score for rook move (simplified, assuming rook value doesn't change much by position or we accept small drift, 
+            # but ideally we should update it. Let's do it properly.)
+            adder_rook_old = rook.get_value_adder_matrix()[new_row][rook_col]
+            val_rook_old = rook.value + adder_rook_old
+            self.punctuation -= val_rook_old if rook.color == 'white' else -val_rook_old
+            
+            adder_rook_new = rook.get_value_adder_matrix()[new_row][rook_target_col]
+            val_rook_new = rook.value + adder_rook_new
+            self.punctuation += val_rook_new if rook.color == 'white' else -val_rook_new
 
-    def undo_move(self, piece: Piece, original_pos: tuple[int, int], target_pos: tuple[int, int], captured_piece: Piece | None, original_piece: Piece | None = None):
+        elif move_type == Moves.CASTLING_LONG:
+            rook_col = 0
+            rook_target_col = 3
+            rook = self.board[new_row][rook_col]
+            self.board[new_row][rook_col] = None
+            self.board[new_row][rook_target_col] = rook
+            rook.position = (new_row, rook_target_col)
+
+            adder_rook_old = rook.get_value_adder_matrix()[new_row][rook_col]
+            val_rook_old = rook.value + adder_rook_old
+            self.punctuation -= val_rook_old if rook.color == 'white' else -val_rook_old
+            
+            adder_rook_new = rook.get_value_adder_matrix()[new_row][rook_target_col]
+            val_rook_new = rook.value + adder_rook_new
+            self.punctuation += val_rook_new if rook.color == 'white' else -val_rook_new
+
+        # Update Castling Rights
+        if self.castling_rights:
+            if piece.get_name() == 'King':
+                if piece.color == 'white':
+                    self.castling_rights = self.castling_rights.replace('K', '').replace('Q', '')
+                else:
+                    self.castling_rights = self.castling_rights.replace('k', '').replace('q', '')
+            elif piece.get_name() == 'Rook':
+                if piece.color == 'white':
+                    if old_col == 0: self.castling_rights = self.castling_rights.replace('Q', '')
+                    elif old_col == 7: self.castling_rights = self.castling_rights.replace('K', '')
+                else:
+                    if old_col == 0: self.castling_rights = self.castling_rights.replace('q', '')
+                    elif old_col == 7: self.castling_rights = self.castling_rights.replace('k', '')
+            
+            if target and target.get_name() == 'Rook':
+                 if target.color == 'white':
+                    if new_col == 0: self.castling_rights = self.castling_rights.replace('Q', '')
+                    elif new_col == 7: self.castling_rights = self.castling_rights.replace('K', '')
+                 else:
+                    if new_col == 0: self.castling_rights = self.castling_rights.replace('q', '')
+                    elif new_col == 7: self.castling_rights = self.castling_rights.replace('k', '')
+
+        return target, old_castling_rights
+
+    def undo_move(self, piece: Piece, original_pos: tuple[int, int], target_pos: tuple[int, int], captured_piece: Piece | None, old_castling_rights: str, original_piece: Piece | None = None, move_type: Moves = Moves.NORMAL):
         old_row, old_col = original_pos
         new_row, new_col = target_pos
 
@@ -96,6 +155,42 @@ class Board:
                 self.white_king_pos = original_pos
             else:
                 self.black_king_pos = original_pos
+        
+        # Restore Castling Rights
+        self.castling_rights = old_castling_rights
+
+        # Undo Castling Rook Move
+        if move_type == Moves.CASTLING_SHORT:
+            rook_col = 7
+            rook_current_col = 5
+            rook = self.board[new_row][rook_current_col]
+            self.board[new_row][rook_current_col] = None
+            self.board[new_row][rook_col] = rook
+            rook.position = (new_row, rook_col)
+
+            adder_rook_curr = rook.get_value_adder_matrix()[new_row][rook_current_col]
+            val_rook_curr = rook.value + adder_rook_curr
+            self.punctuation -= val_rook_curr if rook.color == 'white' else -val_rook_curr
+            
+            adder_rook_old = rook.get_value_adder_matrix()[new_row][rook_col]
+            val_rook_old = rook.value + adder_rook_old
+            self.punctuation += val_rook_old if rook.color == 'white' else -val_rook_old
+
+        elif move_type == Moves.CASTLING_LONG:
+            rook_col = 0
+            rook_current_col = 3
+            rook = self.board[new_row][rook_current_col]
+            self.board[new_row][rook_current_col] = None
+            self.board[new_row][rook_col] = rook
+            rook.position = (new_row, rook_col)
+
+            adder_rook_curr = rook.get_value_adder_matrix()[new_row][rook_current_col]
+            val_rook_curr = rook.value + adder_rook_curr
+            self.punctuation -= val_rook_curr if rook.color == 'white' else -val_rook_curr
+            
+            adder_rook_old = rook.get_value_adder_matrix()[new_row][rook_col]
+            val_rook_old = rook.value + adder_rook_old
+            self.punctuation += val_rook_old if rook.color == 'white' else -val_rook_old
     
     def get_pieces(self, color: str):
         return [piece for row in self.board for piece in row if piece is not None and piece.color == color]
