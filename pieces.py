@@ -1,5 +1,4 @@
 
-
 class Piece:
     color: str = 'white'
     value: int = 0

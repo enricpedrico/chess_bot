@@ -1,61 +1,67 @@
-from dataclasses import dataclass
-from objects.board import Board
-from copy import deepcopy
+from dataclasses import dataclass, field
+from board import Board
 import random
+from move_generator import MoveGenerator
+from evaluator import Evaluator
 
 @dataclass
 class MoveCalculator:
-    def calculate_move(self, board: Board, iter: int = 0, color: str = 'white', MAX_DEPTH = 0) -> tuple[Board, tuple]:
-        legal_moves = []
-        for piece in board.get_pieces(color=color):
-            for move_tuple in board.get_legal_moves(piece=piece):
-                new_board = deepcopy(board)
+    move_generator: MoveGenerator = field(default_factory=MoveGenerator)
+    evaluator: Evaluator = field(default_factory=Evaluator)
 
-                old_row, old_col = piece.position
-                copied_piece = new_board.board[old_row][old_col]
+    def calculate_move(self, board: Board, iter: int = 0, color: str = 'white', MAX_DEPTH = 0) -> tuple[float, list]:
+        if iter >= MAX_DEPTH:
+            return self.evaluator.get_punctuation(board_obj=board, color='white'), []
 
-                copied_move = (move_tuple[0], move_tuple[1], copied_piece, move_tuple[3])
-
-                new_board.move(copied_move)
-
-                legal_moves.append((new_board, copied_move))
+        pieces = board.get_pieces(color=color)
         
-        if iter >= MAX_DEPTH: # BASE CASE
-            return self.choose_random(function=max, legal_moves=legal_moves, color=color)
+        best_score = float('-inf') if color == 'white' else float('inf')
+        best_path = []
         
-        responses = []
-        for board, move_made in legal_moves:
-            new_board, new_move_tuple = self.calculate_move(board=board,
-                                                          iter=iter+1,
-                                                          color=self.get_other_color(color),
-                                                          MAX_DEPTH=MAX_DEPTH)
-            if iter == 0:
-                responses.append((new_board,
-                                  move_made))
-            else:
-                responses.append((new_board,
-                                  new_move_tuple))
+        legal_moves_found = False
+        
+        candidates = []
 
-        return self.choose_random(function=min, legal_moves=responses, color=self.get_other_color(color))
+        for piece in pieces:
+            original_pos = piece.position
+            moves = self.move_generator.get_legal_moves(board_obj=board, piece=piece)
+            
+            for move_tuple in moves:
+                legal_moves_found = True
+                target_row, target_col, move_piece, move_type = move_tuple
+                
+                captured_piece = board.move(move_tuple, start_pos=original_pos)
+                
+                score, child_path = self.calculate_move(board, iter + 1, self.get_other_color(color), MAX_DEPTH)
 
+                original_piece = piece if move_piece != piece else None
+                board.undo_move(move_piece, original_pos, (target_row, target_col), captured_piece, original_piece)
 
-    @staticmethod
-    def choose_random(function, legal_moves: list[tuple[Board, tuple]], color: str) -> tuple[Board, tuple]:
-        if not legal_moves:
-            print('NO LEGAL MOVES')
-            return None
+                current_path = [move_tuple] + child_path
 
-        scores = [(board.get_punctuation(color=color), board, move) for board, move in legal_moves]
+                if color == 'white':
+                    if score > best_score:
+                        best_score = score
+                        best_path = current_path
+                        candidates = [(score, current_path)]
+                    elif score == best_score:
+                        candidates.append((score, current_path))
+                else:
+                    if score < best_score:
+                        best_score = score
+                        best_path = current_path
+                        candidates = [(score, current_path)]
+                    elif score == best_score:
+                        candidates.append((score, current_path))
 
-        best_value = function(score for score, _, _ in scores)
+        if not legal_moves_found:
+            return self.evaluator.get_punctuation(board_obj=board, color='white'), []
 
-        best_moves = [(board, move) for score, board, move in scores if score == best_value]
+        if candidates:
+            _, best_path = random.choice(candidates)
 
-        board, move = random.choice(best_moves)
+        return best_score, best_path
 
-        return board, move
-
-    
     @staticmethod
     def get_other_color(color: str):
         return 'black' if color == 'white' else 'white'

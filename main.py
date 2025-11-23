@@ -1,7 +1,8 @@
-from objects.moves import Moves
-from objects.piece import Piece
+from moves import Moves
+from pieces import Piece
 from move_calculator import MoveCalculator
-from objects.board import Board
+from board import Board
+from fen_parser import FenParser
 
 
 def get_move_name(move: tuple[int, int, Piece, Moves]):
@@ -15,16 +16,25 @@ def get_move_name(move: tuple[int, int, Piece, Moves]):
 def execute():
     fen_input: str = str(input("FEN position (or empty): "))
     if fen_input == "":
-        board = Board()
+        board_matrix = FenParser.create_starting_board()
+        board = Board(board=board_matrix)
     else:
-        board = Board.from_fen(fen_input)
-    MAX_DEPTH = 2
-    board, move = MoveCalculator().calculate_move(board=board, iter=0, color='white', MAX_DEPTH=MAX_DEPTH)
+        board = FenParser.from_fen(fen_input)
+    
+    MAX_DEPTH = 4
+    score, move_path = MoveCalculator().calculate_move(board=board, iter=0, color='white', MAX_DEPTH=MAX_DEPTH)
 
     print('             ')
-    print(get_move_name(move))
-    #print(board)
-
+    if move_path:
+        print(f'BEST MOVE: {get_move_name(move_path[0])}')
+        
+        if len(move_path) > 1:
+            print('NEXT MOVES: ', end='')
+            for move in move_path[1:]:
+                print(get_move_name(move), end=' ')
+            print()
+    else:
+        print("No moves found")
 
 if __name__ == "__main__":
     execute()
