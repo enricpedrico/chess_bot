@@ -22,7 +22,8 @@ def execute():
         board = FenParser.from_fen(fen_input)
     
     MAX_DEPTH = 4
-    score, move_path = MoveCalculator().calculate_move(board=board, iter=0, color='white', MAX_DEPTH=MAX_DEPTH)
+    COLOR = 'black'
+    score, move_path = MoveCalculator().calculate_move(board=board, iter=0, color=COLOR, MAX_DEPTH=MAX_DEPTH)
 
     print('             ')
     if move_path:

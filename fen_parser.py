@@ -17,6 +17,16 @@ class FenParser:
         obj.halfmove_clock = int(halfmove)
         obj.fullmove_number = int(fullmove)
 
+        # Initialize king positions
+        for r in range(8):
+            for c in range(8):
+                piece = obj.board[r][c]
+                if piece and piece.get_name() == 'King':
+                    if piece.color == 'white':
+                        obj.white_king_pos = (r, c)
+                    else:
+                        obj.black_king_pos = (r, c)
+
         return obj
     
     @staticmethod

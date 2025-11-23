@@ -11,6 +11,8 @@ class Board:
     halfmove_clock: int = 0
     fullmove_number: int = 1
     punctuation: float = 0.0
+    white_king_pos: tuple[int, int] | None = None
+    black_king_pos: tuple[int, int] | None = None
 
     def __post_init__(self):
         if self.punctuation == 0.0:
@@ -58,6 +60,12 @@ class Board:
 
         piece.position = (new_row, new_col)
 
+        if piece.get_name() == 'King':
+            if piece.color == 'white':
+                self.white_king_pos = (new_row, new_col)
+            else:
+                self.black_king_pos = (new_row, new_col)
+
         return target
 
     def undo_move(self, piece: Piece, original_pos: tuple[int, int], target_pos: tuple[int, int], captured_piece: Piece | None, original_piece: Piece | None = None):
@@ -82,6 +90,12 @@ class Board:
         self.board[new_row][new_col] = captured_piece
         self.board[old_row][old_col] = piece_to_restore
         piece_to_restore.position = original_pos
+
+        if piece_to_restore.get_name() == 'King':
+            if piece_to_restore.color == 'white':
+                self.white_king_pos = original_pos
+            else:
+                self.black_king_pos = original_pos
     
     def get_pieces(self, color: str):
         return [piece for row in self.board for piece in row if piece is not None and piece.color == color]
